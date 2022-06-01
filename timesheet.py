@@ -11,7 +11,7 @@ import requests
 
 
 app = FastAPI()
-employee_api_endpoint = "http://127.0.0.1:8080/employees/"
+employee_api_endpoint = "http://127.0.0.1:8090/employees/"
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -27,14 +27,14 @@ def get_db():
 def check_employee(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        employee_id = kwargs['employee_id']
+        employee_id = kwargs["employee_id"]
         r = requests.get(employee_api_endpoint + str(employee_id), timeout=5)
         if r.status_code == 404:
             raise HTTPException(
-            status_code=404,
-            detail=f"Employee ID {employee_id} : Does not exist"
-        )
+                status_code=404, detail=f"Employee ID {employee_id} : Does not exist"
+            )
         return await func(*args, **kwargs)
+
     return wrapper
 
 
@@ -47,7 +47,15 @@ class TimeSheet(BaseModel):
 @app.get("/timesheet/{employee_id}")
 @check_employee
 async def list_timesheet_records(employee_id: int, db: Session = Depends(get_db)):
-    return db.query(models.TimeSheet).filter(models.TimeSheet.employee_id == employee_id).values(models.TimeSheet.employee_id, models.TimeSheet.date, models.TimeSheet.hours_worked)
+    return (
+        db.query(models.TimeSheet)
+        .filter(models.TimeSheet.employee_id == employee_id)
+        .values(
+            models.TimeSheet.employee_id,
+            models.TimeSheet.date,
+            models.TimeSheet.hours_worked,
+        )
+    )
 
 
 @app.post("/timesheet")
@@ -66,8 +74,18 @@ def create_timesheet(timesheet: TimeSheet, db: Session = Depends(get_db)):
 
 @app.get("/timesheet/{employee_id}/{date}")
 @check_employee
-async def get_timesheet_record(employee_id: int, date: datetime.date, db: Session = Depends(get_db)):
+async def get_timesheet_record(
+    employee_id: int, date: datetime.date, db: Session = Depends(get_db)
+):
     print(date)
-    return db.query(models.TimeSheet).filter(
-        models.TimeSheet.employee_id == employee_id,
-        models.TimeSheet.date == date).values(models.TimeSheet.employee_id, models.TimeSheet.date, models.TimeSheet.hours_worked)
+    return (
+        db.query(models.TimeSheet)
+        .filter(
+            models.TimeSheet.employee_id == employee_id, models.TimeSheet.date == date
+        )
+        .values(
+            models.TimeSheet.employee_id,
+            models.TimeSheet.date,
+            models.TimeSheet.hours_worked,
+        )
+    )
